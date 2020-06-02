@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(rugarch)
+
+dfs <- list()
+GARCH_stocks = c('stock2.txt', 'stock27.txt', 'stock32.txt', 'stock37.txt', 'stock7.txt')
+
+
+for (file_n in list.files('data/stock')){
+  if (file_n %in% GARCH_stocks){
+    file_path = paste('data/stock', file_n, sep='/')
+    df <- read.csv(file_path)
+    dfs[[file_n]] <- df[['x']]
+  }
+}
+
+GARCH11.spec = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), 
+  mean.model = list(armaOrder = c(0, 0), include.mean = TRUE), 
+  distribution.model = "norm")
+
+qs<- c()
+for (s_name in GARCH_stocks){
+  
+  m <- 10000
+  fit <- ugarchfit(GARCH11.spec, dfs[[s_name]] )
+  sim <- ugarchsim(fit, startMethod='sample', n.sim = 10, m.sim = m)
+  
+  quantiles <- c()
+  
+  for (m_sim in c(1:10)){
+    quantiles <- append(quantiles,quantile( sim@simulation$seriesSim[m_sim,], 0.15)[[1]])
+  }
+  qs <- cbind(qs, quantiles)
+  
+}
+qs <- data.frame(qs)
+names(qs) <- GARCH_stocks
+write.csv(qs, 'stocks_GARCH_VaR.csv')
+```
+
